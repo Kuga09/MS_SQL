@@ -275,4 +275,82 @@ EXEC CountSubjectsByFaculty;
 
 
 -- 3
-DROP PROCEDURE CountSubjectsByFaculty;
+CREATE OR ALTER PROCEDURE AddStudentToFacultyForm
+    @LastName NVARCHAR(25),
+    @FirstName NVARCHAR(25),
+    @MiddleName NVARCHAR(25) = NULL,
+    @Faculty NVARCHAR(10),
+    @Form NVARCHAR(10),
+    @BirthDate DATE,
+    @InDate DATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM STUDENTS
+        WHERE faculty = @Faculty AND form = @Form
+    )
+    BEGIN
+        PRINT 'Ошибка: указанная комбинация факультета и формы обучения не существует.';
+        RETURN;
+    END
+
+    INSERT INTO STUDENTS (
+        last_name, first_name, middle_name,
+        faculty, form, year,
+        birth_date, in_date
+    )
+    VALUES (
+        @LastName, @FirstName, @MiddleName,
+        @Faculty, @Form, 1,
+        @BirthDate, @InDate
+    );
+
+    PRINT 'Студент успешно добавлен на факультет "' + @Faculty + '" по форме "' + @Form + '".';
+END;
+
+EXEC AddStudentToFacultyForm
+    @LastName = N'Иванов',
+    @FirstName = N'Петр',
+    @MiddleName = N'Сергеевич',
+    @Faculty = N'ФПМ',
+    @Form = N'очная',
+    @BirthDate = '2000-05-15',
+    @InDate = '2025-09-01';
+
+SELECT 
+    TEACHERS.last_name + ' ' + TEACHERS.first_name + ' ' + COALESCE(TEACHERS.middle_name, '') AS teacher,
+    TEACHERS.form,
+    STUDENTS.last_name + ' ' + STUDENTS.first_name + ' ' + COALESCE(STUDENTS.middle_name, '') AS student
+FROM TEACHERS
+JOIN STUDENTS ON TEACHERS.form = STUDENTS.form
+ORDER BY teacher, student;
+
+INSERT INTO STUDENTS 
+(last_name,first_name,middle_name,form,faculty,year,all_h,inclass_h,birth_date,in_date,exm,group_id) 
+VALUES
+(N'Загорова',N'К',NULL,N'заочная',N'ФПК',1,300,100,'19831212','20160901',8,1),
+(N'Зуров',N'Д',N'Е',N'заочная',N'ФПК',2,300,100,'19831012','20150901',8.4,2);
+
+SELECT DISTINCT
+    TEACHERS.last_name,
+    TEACHERS.first_name,
+    TEACHERS.middle_name
+FROM TEACHERS
+LEFT JOIN STUDENTS ON TEACHERS.last_name = STUDENTS.last_name
+WHERE STUDENTS.last_name IS NOT NULL
+ORDER BY TEACHERS.last_name, TEACHERS.first_name;
+
+SELECT DISTINCT 
+    STUDENTS.last_name,
+    STUDENTS.first_name,
+    STUDENTS.middle_name
+FROM TEACHERS
+RIGHT JOIN STUDENTS ON TEACHERS.last_name = STUDENTS.last_name
+WHERE TEACHERS.last_name IS NULL
+ORDER BY STUDENTS.last_name, STUDENTS.first_name;
+
+
+
